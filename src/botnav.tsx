@@ -1,12 +1,27 @@
 import React, {useState} from "react";
-import {Text, View, StyleSheet, Image} from 'react-native';
-//Object props
+import {Text, View, StyleSheet, Image, TouchableOpacity} from 'react-native';
+import { ScreenName } from "./root";
+
+
+//types
+type IconName = keyof typeof ICONS
 
 
 type type_icon = {
-    type: String; //Represent the file's name 
+    icon_name: IconName;
+    activeScreen: ScreenName,
+    setActiveScreen: (screen: ScreenName) => void;
+};
+
+type Nav_props = {
+    activeScreen: ScreenName,
+    setActiveScreen: (screen: ScreenName) => void;
 }
 
+type Screen = typeof Screen[keyof typeof Screen];
+
+
+//Object props
 
 const style_nav = StyleSheet.create({
     container_root:{
@@ -30,22 +45,54 @@ const style_nav = StyleSheet.create({
     }
 });
 
-const Icons = (prop_icon: type_icon)=> {
 
+
+
+const ICONS = {
+    home: require("../icons/home_2-invert.png"),
+    schedule: require("../icons/calendar-invert.png"),
+    config: require("../icons/setting-invert.png")
+};
+
+const Screen = {
+    home: "home",
+    schedule: "schedule",
+    config: "setting"
+} as const;
+
+
+
+const Icons = ({icon_name, activeScreen, setActiveScreen}: type_icon)=> {
+    
     return(
-        <View style={style_nav.container_icons}>
-            <Image style={style_nav.img} source={require("../icons/home_2.png")}/>
-        </View>
+        <TouchableOpacity 
+            style={style_nav.container_icons}
+            onPress={()=>setActiveScreen(Screen[icon_name])}
+        >
+            <Image style={style_nav.img} source={ICONS[icon_name]}/>
+        </TouchableOpacity>
     );
 }
 
 
-const Nav = ()=>{
+
+
+const Nav = ({activeScreen, setActiveScreen}: Nav_props)=>{
+
     return(
         <View style={style_nav.container_root}>
-            <Icons type={"home"}/>
-            <Icons type={"Schedule"}/>
-             <Icons type={"CONifg"}/>
+
+            <Icons icon_name={"home"} 
+                activeScreen={activeScreen} 
+                setActiveScreen={setActiveScreen}/>
+
+            <Icons icon_name={"schedule"} 
+            activeScreen={activeScreen} 
+                setActiveScreen={setActiveScreen}/>
+
+            <Icons icon_name={"config"} 
+            activeScreen={activeScreen} 
+                setActiveScreen={setActiveScreen}/>
         </View>
     );
 }

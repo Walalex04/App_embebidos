@@ -64,16 +64,25 @@ const style_home = StyleSheet.create({
     }
 });
 
+type props_widget = {
+    type_icon: keyof typeof ICONS_WIDGET
+}
+
+const ICONS_WIDGET = {
+    TEMPERATURE: require("../icons/temperature.png"),
+    HUMIDITY: require("../icons/humidity.png"),
+    CO2: require("../icons/carbon-dioxide.png")
+}
 
 //The wiget will show the sensor's informatizon
-const Widget = () => {
+const Widget = ({type_icon}: props_widget) => {
     return(
         <View style={style_home.widget_st}>
             <View style={style_home.container_image}>
-                <Image style={style_home.icond_widget} source={require('../icons/temp.png')} />
+                <Image style={style_home.icond_widget} source={ICONS_WIDGET[type_icon]} />
             </View>
             
-            <Text style={style_home.text_style}>35 C</Text>
+            <Text style={style_home.text_style}>45 C</Text>
         </View>
     );
 }
@@ -97,35 +106,35 @@ const Schedule = ()=>{
             <View style={style_home.container_schedule}>
                 <View style={style_home.container_columns}>
                     <Text style={
-                        {color: "#FFF", flex: 0.1, fontSize: 15, paddingRight: 30}
+                        {color: "#FFF", flex: 0.2, fontSize: 15, paddingRight: 30}
                         }>Time</Text>
                     <Text style={{color: "#FFF", flex: 1 ,fontSize: 15}}>Activities</Text>
                 </View>
 
                 <View style={style_home.container_columns}>
-                    <Text style={{color: "#FFF",flex: 0.1, fontSize: 15, paddingRight: 30}}>09:00</Text>
+                    <Text style={{color: "#FFF",flex: 0.2, fontSize: 15, paddingRight: 30}}>09:00</Text>
                     <Text style={{color: "#FFF", flex: 1 ,fontSize: 15}}>Study Electronic</Text>
                 </View>
 
                 <View style={style_home.container_columns}>
-                    <Text style={{color: "#FFF", flex: 0.1, fontSize: 15, paddingRight: 30}}>13:00</Text>
+                    <Text style={{color: "#FFF", flex: 0.2, fontSize: 15, paddingRight: 30}}>13:00</Text>
                     <Text style={{color: "#FFF",flex: 1,fontSize: 15}}>Study Electronic</Text>
                 </View>
 
 
                 <View style={style_home.container_columns}>
-                    <Text style={{color: "#FFF", flex: 0.1, fontSize: 15, paddingRight: 30}}>13:00</Text>
+                    <Text style={{color: "#FFF", flex: 0.2, fontSize: 15, paddingRight: 30}}>13:00</Text>
                     <Text style={{color: "#FFF",flex: 1,fontSize: 15}}>Study Electronic</Text>
                 </View>
 
                <View style={style_home.container_columns}>
-                    <Text style={{color: "#FFF", flex: 0.1, fontSize: 15, paddingRight: 30}}>13:00</Text>
+                    <Text style={{color: "#FFF", flex: 0.2, fontSize: 15, paddingRight: 30}}>13:00</Text>
                     <Text style={{color: "#FFF",flex: 1,fontSize: 15}}>Study Electronic</Text>
                 </View>
 
 
                 <View style={style_home.container_columns}>
-                    <Text style={{color: "#FFF", flex: 0.1, fontSize: 15, paddingRight: 30}}>13:00</Text>
+                    <Text style={{color: "#FFF", flex: 0.2, fontSize: 15, paddingRight: 30}}>13:00</Text>
                     <Text style={{color: "#FFF",flex: 1,fontSize: 15}}>Study Electronic</Text>
                 </View>
                 
@@ -141,9 +150,9 @@ const Home = ()=>{
             <ScrollView style={style_home.container_root}>
                 <View style={style_home.cointainer_widgets}>
                     
-                    <Widget></Widget>
-                    <Widget></Widget>
-                    <Widget></Widget>
+                    <Widget type_icon="TEMPERATURE"></Widget>
+                    <Widget type_icon="HUMIDITY"></Widget>
+                    <Widget type_icon="CO2"></Widget>
                     
                 </View>
                 <Schedule></Schedule>

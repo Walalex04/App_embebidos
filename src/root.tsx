@@ -4,6 +4,8 @@ import {Text, View, StyleSheet} from 'react-native';
 //My elements
 import Nav from './botnav';
 import Home from "./home";
+import Schedule from "./schedule";
+import Setting from "./setting";
 
 const style_root = StyleSheet.create({
     root:{
@@ -14,11 +16,24 @@ const style_root = StyleSheet.create({
 });
 
 
+//types
+
+export type ScreenName = "home" | "schedule" | "setting";
+
+
 const Root = ()=>{
+    const [activeScreen, setActiveScreen] = useState<ScreenName>("home");
+    
+
     return(
         <View style={style_root.root}>
-            <Home></Home>
-            <Nav></Nav>
+            {activeScreen === "home" && <Home/>}
+            {activeScreen === "schedule" && <Schedule/>}
+            {activeScreen === "setting" && <Setting/>}
+            <Nav
+                activeScreen={activeScreen}
+                setActiveScreen={setActiveScreen}
+            ></Nav>
         </View>
     );
 }
