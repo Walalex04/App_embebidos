@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import {Text, View, StyleSheet, ScrollView, Image, Button, TextInput} from 'react-native';
+import {Text, View, StyleSheet, ScrollView, Image, Button, TextInput, Alert} from 'react-native';
 import LinearGradient from "react-native-linear-gradient";
 import { Picker } from "@react-native-picker/picker";
 
@@ -157,9 +157,14 @@ const Status = ()=>{
         
     )
 }
-
-const FormConnected = ()=>{
-    return(
+interface FormConnectedProps {
+  ssid: string;
+  setSsid: (value: string) => void;
+  password: string;
+  setPassword: (value: string) => void;
+}
+const FormConnected: React.FC<FormConnectedProps> = ({ ssid, setSsid, password, setPassword }) => {
+  return (
         <View>
             <View>
                 <Text style={style_setting.labels}>Input the SSID:</Text>
@@ -167,6 +172,9 @@ const FormConnected = ()=>{
                     style={style_setting.input_text}
                     placeholder="SSID"
                     keyboardType="default"
+                    value={ssid}
+                    onChangeText={setSsid}
+                    autoCapitalize="none"
                 />
             </View>
             <View>
@@ -175,6 +183,9 @@ const FormConnected = ()=>{
                     style={style_setting.input_text}
                     placeholder="PASSWORD"
                     keyboardType="visible-password"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={true}
                     
                 />
             </View>
@@ -184,6 +195,47 @@ const FormConnected = ()=>{
 }
 
 const Setting = ()=>{
+    const [ssid, setSsid] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const sendWifiConfig = async () => {
+    if (!ssid.trim() || !password.trim()) {
+      Alert.alert("Error", "Por favor ingresa SSID y contraseña");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("ssid", ssid);
+      formData.append("password", password);
+      console.log(formData);
+
+      const response = await fetch("http://192.168.4.1/wifi", {
+        method: "POST",
+        headers: {
+          // NO pongas Content-Type, fetch lo asigna automáticamente para multipart/form-data
+        },
+        body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error: ${response.status}`);
+        }
+
+        Alert.alert("Éxito", "Configuración WiFi enviada correctamente");
+        } catch (error : unknown) {
+            if (error instanceof Error) {
+                console.error(error.message);
+            } else {
+                console.error("Error desconocido", error);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
     return(
         
             <ScrollView style={style_setting.container_root}>
@@ -191,10 +243,10 @@ const Setting = ()=>{
                 <Status />
                 <RGPicker />
 
-                <FormConnected/>
+                <FormConnected ssid={ssid} setSsid={setSsid} password={password} setPassword={setPassword}/>
 
                 <View style={{marginTop:20}}>
-                    <Button title="Update Setting"/>
+                    <Button title={loading ? "Enviando..." : "Update Setting"} onPress={sendWifiConfig} disabled={loading} />
                 </View>
                 
             </ScrollView>

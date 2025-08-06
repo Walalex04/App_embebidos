@@ -82,12 +82,16 @@ const Widget = ({type_icon}: props_widget) => {
         console.log("enviando el request");
         const fetchData = async ()=> {
             try{
-                const response = await fetch("192.168.0.10");
+                const response = await fetch("http://192.168.0.10");
                 const data = await response.json();
                 console.log(data);
                 //setValue(data.oxigen) if type_icon === 'TEMPERATURE'
                 if(type_icon === 'TEMPERATURE'){
-                    setValue("10" + " C");
+                    setValue(data.Temperatura + " C");
+                }else if(type_icon === 'HUMIDITY'){
+                    setValue(data.Humedad + " % ");
+                }else if(type_icon === 'CO2'){
+                    setValue(data.CO2 + "ppm");
                 }
             }catch(err){
                 console.log(err);
@@ -111,7 +115,54 @@ const Widget = ({type_icon}: props_widget) => {
     );
 }
 
+
+type Tarea = {
+    datos: {
+        date: string;
+        filename: string;
+        rgb: string;
+        time: string;
+        tipoTarea: string;
+    };
+};
+
+type ScheduleItem = {
+  time: string;
+  activity: string;
+};
+
 const Schedule = ()=>{
+
+    const [scheduleData, setScheduleData] = useState<ScheduleItem[]>([]);
+
+    useEffect(() => {
+        fetch('http://192.168.0.10/task') // ← Reemplaza con tu URL real
+            .then(response => response.json())
+             .then((data: { [key: string]: Tarea }) => {
+                // Transformamos el objeto en un array
+                console.log(data);
+                    const transformed = Object.values(data).map(entry => {
+                        return {
+                            time: entry.datos.time,
+                            activity: entry.datos.tipoTarea
+                            };
+                        });
+     
+
+                setScheduleData(transformed);
+            })
+            .catch(error => console.error('Error fetching schedule:', error));
+    }, []);
+
+/*
+    {scheduleData.map((item, index) => (
+                    <View key={index} style={style_home.container_columns}>
+                        <Text style={{ color: "#FFF", flex: 0.2, fontSize: 15, paddingRight: 30 }}>{item.time}</Text>
+                        <Text style={{ color: "#FFF", flex: 1, fontSize: 15 }}>{item.activity}</Text>
+                    </View>
+                ))}
+*/
+
     return(
         <View style={{
             marginBottom: 40
@@ -128,39 +179,12 @@ const Schedule = ()=>{
                 
             }}>Daily Schedule</Text>
             <View style={style_home.container_schedule}>
-                <View style={style_home.container_columns}>
-                    <Text style={
-                        {color: "#FFF", flex: 0.2, fontSize: 15, paddingRight: 30}
-                        }>Time</Text>
-                    <Text style={{color: "#FFF", flex: 1 ,fontSize: 15}}>Activities</Text>
-                </View>
-
-                <View style={style_home.container_columns}>
-                    <Text style={{color: "#FFF",flex: 0.2, fontSize: 15, paddingRight: 30}}>09:00</Text>
-                    <Text style={{color: "#FFF", flex: 1 ,fontSize: 15}}>Study Electronic</Text>
-                </View>
-
-                <View style={style_home.container_columns}>
-                    <Text style={{color: "#FFF", flex: 0.2, fontSize: 15, paddingRight: 30}}>13:00</Text>
-                    <Text style={{color: "#FFF",flex: 1,fontSize: 15}}>Study Electronic</Text>
-                </View>
-
-
-                <View style={style_home.container_columns}>
-                    <Text style={{color: "#FFF", flex: 0.2, fontSize: 15, paddingRight: 30}}>13:00</Text>
-                    <Text style={{color: "#FFF",flex: 1,fontSize: 15}}>Study Electronic</Text>
-                </View>
-
-               <View style={style_home.container_columns}>
-                    <Text style={{color: "#FFF", flex: 0.2, fontSize: 15, paddingRight: 30}}>13:00</Text>
-                    <Text style={{color: "#FFF",flex: 1,fontSize: 15}}>Study Electronic</Text>
-                </View>
-
-
-                <View style={style_home.container_columns}>
-                    <Text style={{color: "#FFF", flex: 0.2, fontSize: 15, paddingRight: 30}}>13:00</Text>
-                    <Text style={{color: "#FFF",flex: 1,fontSize: 15}}>Study Electronic</Text>
-                </View>
+                {scheduleData.map((item, index) => (
+                    <View key={index} style={style_home.container_columns}>
+                        <Text style={{ color: "#FFF", flex: 0.2, fontSize: 15, paddingRight: 30 }}>{item.time}</Text>
+                        <Text style={{ color: "#FFF", flex: 1, fontSize: 15 }}>{item.activity}</Text>
+                    </View>
+                ))}
                 
             </View>
         </View>
