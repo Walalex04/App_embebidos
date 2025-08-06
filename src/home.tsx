@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import {Text, View, StyleSheet, ScrollView, Image} from 'react-native';
 import LinearGradient from "react-native-linear-gradient";
 
@@ -72,17 +72,41 @@ const ICONS_WIDGET = {
     TEMPERATURE: require("../icons/temperature.png"),
     HUMIDITY: require("../icons/humidity.png"),
     CO2: require("../icons/carbon-dioxide.png")
-}
+} as const;
 
 //The wiget will show the sensor's informatizon
 const Widget = ({type_icon}: props_widget) => {
+    const [value, setValue] = useState("0");
+    console.log("en el wisget")
+    useEffect(()=>{
+        console.log("enviando el request");
+        const fetchData = async ()=> {
+            try{
+                const response = await fetch("192.168.0.10");
+                const data = await response.json();
+                console.log(data);
+                //setValue(data.oxigen) if type_icon === 'TEMPERATURE'
+                if(type_icon === 'TEMPERATURE'){
+                    setValue("10" + " C");
+                }
+            }catch(err){
+                console.log(err);
+            }
+        };
+
+        fetchData();
+        const intervalId = setInterval(fetchData, 180000);
+
+        return ()=> clearInterval(intervalId);
+    }, [type_icon]);
+
     return(
         <View style={style_home.widget_st}>
             <View style={style_home.container_image}>
                 <Image style={style_home.icond_widget} source={ICONS_WIDGET[type_icon]} />
             </View>
             
-            <Text style={style_home.text_style}>45 C</Text>
+            <Text style={style_home.text_style}>{value}</Text>
         </View>
     );
 }

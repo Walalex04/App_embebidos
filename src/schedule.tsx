@@ -1,11 +1,18 @@
-import React, {useState, useRef} from "react";
+import React, {useState, useRef, useEffect} from "react";
 import {Text, View, StyleSheet, PermissionsAndroid,NativeModules ,Platform, ScrollView, TextInput, Button, Alert} from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Picker } from "@react-native-picker/picker";
+import { decode } from 'base64-arraybuffer';
+import RNFS from 'react-native-fs';
 
+
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = 'https://xxviwfoyyskhnxqznlly.supabase.co';
+const supabaseKey = 'sb_secret_IIAHf07ZZpidZGlVS_ZW1w_sIUKHlBD';
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 const {MyAudioModule} = NativeModules;
-
 
 
 const style_schedule = StyleSheet.create({  
@@ -51,13 +58,42 @@ const style_schedule = StyleSheet.create({
     }
 });
 
+const uploadAudioToSupabase = async (localFilePath: string, fileName: string) => {
+  try {
+    // Leer archivo local en base64
+    const base64File = await RNFS.readFile(localFilePath, 'base64');
+
+    // Subir a Supabase storage como un Blob (buffer)
+    const { data, error } = await supabase.storage
+      .from('appembebidos')  // tu bucket
+      .upload(fileName, Buffer.from(base64File, 'base64'), {
+        contentType: 'application/octet-stream', // o 'audio/raw' si quieres
+        upsert: true,
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    console.log('Archivo subido:', data);
+    return data; // info del archivo subido
+  } catch (error) {
+    console.error('Error subiendo archivo:', error);
+    return null;
+  }
+};
+
 
 const Rango = Array.from({ length: 256 }, (_, i) => i); // [0,1,2,...,255]
 
-const RGPicker = ()=>{
+const RGPicker = ({ onChangeRgb }: { onChangeRgb: (rgb: string) => void })=>{
   const [red, setRed] = useState(0);
   const [green, setGreen] = useState(0);
   const [blue, setBlue] = useState(0);
+
+  useEffect(() => {
+    onChangeRgb(`${red}-${green}-${blue}`);
+  }, [red, green, blue, onChangeRgb]);
 
   return (
     <View style={styles.container}>
@@ -138,9 +174,14 @@ const styles = StyleSheet.create({
 // Simula tu módulo nativo para grabar audio
 
 
-const AudioRecorder = () => {
+const AudioRecorder = ({
+  setAudioFileName,
+}: {
+  setAudioFileName: React.Dispatch<React.SetStateAction<string>>;
+}) => {
   const [recording, setRecording] = useState(false);
   const [audioPath, setAudioPath] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const requestAudioPermission = async () => {
     if (Platform.OS === 'android') {
@@ -169,6 +210,7 @@ const AudioRecorder = () => {
       const path = await MyAudioModule.startRecording();
       setAudioPath(path);
       setRecording(true);
+      setAudioFileName(""); // limpio el archivo previo
     } catch {
       Alert.alert('Error', 'No se pudo iniciar la grabación');
     }
@@ -179,6 +221,21 @@ const AudioRecorder = () => {
       await MyAudioModule.stopRecording();
       setRecording(false);
       Alert.alert('Grabación', 'Grabación terminada');
+      if (!audioPath) {
+        Alert.alert("Error", "No se encontró el archivo grabado");
+        return;
+      }
+
+      setUploading(true);
+      const fileName = `audio_${Date.now()}.raw`;
+      const result = await uploadAudioToSupabase(audioPath, fileName);
+      if (result) {
+        Alert.alert("Éxito", "Audio procesado correctamente");
+        setAudioFileName(fileName); // Guardo el nombre para usarlo luego
+      } else {
+        Alert.alert("Error", "No se pudo subir el audio");
+      }
+
     } catch {
       Alert.alert('Error', 'No se pudo detener la grabación');
     }
@@ -211,10 +268,18 @@ const AudioRecorder = () => {
 
 
 const Form = ()=>{
+  const [audioFileName, setAudioFileName] = useState("");
     const [date, setDate] = useState(new Date());
     const [tempDate, setTempDate] = useState(new Date());
     const [show, setShow] = useState(false);
     const [mode, setMode] = useState<'date' | 'time'>('date');
+
+    const [inputTask, setInputTask] = useState("");
+    const [typeTask, setTypeTask] = useState("");
+    const [loading, setLoading] = useState(false);
+
+      // RGB picker state as "R-G-B"
+    const [rgb, setRgb] = useState("0-0-0");
 
     const onChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
         if (event.type === 'dismissed') {
@@ -256,6 +321,65 @@ const Form = ()=>{
         setShow(true);
     };
 
+    const pad = (n: number) => n.toString().padStart(2, '0');
+  const year = date.getFullYear().toString().slice(-2);
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const dateStr = `${day}-${month}-${year}`;
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const timeStr = `${hours}:${minutes}`;
+
+  const handleSubmit = async () => {
+    if (!audioFileName) {
+      Alert.alert("Error", "Debe grabar y subir un archivo antes de registrar la tarea.");
+      return;
+    }
+    if (!inputTask.trim() || !typeTask.trim()) {
+      Alert.alert("Error", "Por favor complete todos los campos.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("type", typeTask);
+      formData.append("date", `"${dateStr}"`); // tal como el formato que quieres
+      formData.append("time", `"${timeStr}"`);
+      formData.append("nameFile", audioFileName);
+      formData.append("rgb", `"${rgb}"`);
+
+      console.log(formData);
+
+      const response = await fetch("http://192.168.0.10/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error en el servidor: ${response.status}`);
+      }
+
+      Alert.alert("Éxito", "Tarea registrada correctamente");
+      // Opcional: limpiar inputs
+      setInputTask("");
+      setTypeTask("");
+      setAudioFileName("");
+      setRgb("0-0-0");
+    } catch (error) {
+      Alert.alert("Error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+
+    const handleRgbChange = (newRgb: string) => {
+      setRgb(newRgb);
+    };
+    
+
     return(
         <View>
             <View>
@@ -264,6 +388,8 @@ const Form = ()=>{
                     style={style_schedule.input_text}
                     placeholder="Input the task"
                     keyboardType="default"
+                    onChangeText={setInputTask}
+                    value={inputTask}
                 />
             </View>
             <View>
@@ -272,6 +398,8 @@ const Form = ()=>{
                     style={style_schedule.input_text}
                     placeholder="Input the type task"
                     keyboardType="default"
+                    value={typeTask}
+                    onChangeText={setTypeTask}
                 />
             </View>
               <View style={{ padding: 20 }}>
@@ -298,28 +426,30 @@ const Form = ()=>{
                 )}
             </View>
             <View>
-                <RGPicker />
+                <RGPicker  onChangeRgb={handleRgbChange}/>
             </View>
 
             <View>
-                <AudioRecorder/>
+                <AudioRecorder setAudioFileName={setAudioFileName}/>
             </View>
 
             <View  >
-                <Button title="Registrar tarea" />
+                <Button title={loading ? "Registrando..." : "Registrar tarea"} onPress={handleSubmit} disabled={loading} />
             </View>
         </View>
     );
 }
 
 const Schedule = ()=>{
+  
     return(
         
-            <ScrollView style={style_schedule.container_root}>
-                <View>
-                    <Text style={style_schedule.text_title}>Add Schedule</Text>
-                    <Form />
-                </View>
+            <ScrollView style={style_schedule.container_root}
+              contentContainerStyle={{ flexGrow: 1 ,  paddingBottom: 40 }}
+              keyboardShouldPersistTaps="handled"
+            >
+                <Text style={style_schedule.text_title}>Add Schedule</Text>
+                <Form />
                 
             </ScrollView>
         
