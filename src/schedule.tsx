@@ -266,8 +266,10 @@ const AudioRecorder = ({
   );
 };
 
-
-const Form = ()=>{
+type props_form = {
+    ip:string
+};
+const Form = ({ip}: props_form)=>{
   const [audioFileName, setAudioFileName] = useState("");
     const [date, setDate] = useState(new Date());
     const [tempDate, setTempDate] = useState(new Date());
@@ -351,7 +353,7 @@ const Form = ()=>{
 
       console.log(formData);
 
-      const response = await fetch("http://192.168.0.10/upload", {
+      const response = await fetch("http://" + ip + "/upload", {
         method: "POST",
         body: formData,
       });
@@ -440,7 +442,10 @@ const Form = ()=>{
     );
 }
 
-const Schedule = ()=>{
+type props_Schedule = {
+    ip: string
+}
+const Schedule = ({ip}: props_Schedule)=>{
   
     return(
         
@@ -449,7 +454,7 @@ const Schedule = ()=>{
               keyboardShouldPersistTaps="handled"
             >
                 <Text style={style_schedule.text_title}>Add Schedule</Text>
-                <Form />
+                <Form ip={ip} />
                 
             </ScrollView>
         

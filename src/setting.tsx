@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useState, useEffect} from "react";
 import {Text, View, StyleSheet, ScrollView, Image, Button, TextInput, Alert} from 'react-native';
 import LinearGradient from "react-native-linear-gradient";
 import { Picker } from "@react-native-picker/picker";
@@ -67,10 +67,48 @@ const style_setting = StyleSheet.create({
 
 const Rango = Array.from({ length: 256 }, (_, i) => i); // [0,1,2,...,255]
 
-const RGPicker = ()=>{
+type props_rgbp = {
+    ip: string
+};
+const RGPicker = ({ip} :props_rgbp)=>{
   const [red, setRed] = useState(0);
   const [green, setGreen] = useState(0);
   const [blue, setBlue] = useState(0);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const sendRGBConfig = async () => {
+      setLoading(true);
+     try {
+        const formData = new FormData();
+        formData.append("red", red);
+        formData.append("green", green);
+        formData.append("blue", blue);
+
+        console.log(formData);
+
+        const response = await fetch("http://"+ip+"/rgb", {
+        method: "POST",
+        headers: {
+          // NO pongas Content-Type, fetch lo asigna automáticamente para multipart/form-data
+        },
+        body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error: ${response.status}`);
+        }
+
+        Alert.alert("Éxito", "Configuracion enviado correctamente");
+        } catch (error : unknown) {
+            if (error instanceof Error) {
+                console.error(error.message);
+            } else {
+                console.error("Error desconocido", error);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
 
   return (
     <View style={styles.container}>
@@ -134,7 +172,11 @@ const RGPicker = ()=>{
 
         
         </View>
-        
+        <View style={{
+            marginTop: 20
+        }}>
+        <Button title={loading ? "Enviando..." : "Actualizar RGB"} onPress={sendRGBConfig} disabled={loading} />
+        </View>
     </View>
   );
 }
@@ -145,15 +187,35 @@ const styles = StyleSheet.create({
   picker: { height: 50, width: 180, color: "#e1e1e1"},
 });
 
-
-const Status = ()=>{
+type props_status = {
+    ip: string,
+    setIp: (param: string) => void
+};
+const Status = ({ip, setIp}:props_status)=>{
     //Verify if this app is conected with the esp32
+        //making the comunication
+    let nip = ip;
+    const [isConnect, setIsConnect] = useState<boolean>(false);
+    
+    useEffect(() => {
+        setInterval(() => {
+            fetch("http://" + ip + "/ip")
+                .then(response => {
+                    if(response.ok){
+                        setIsConnect(true);
+                    }
+                })
+        }, 200)
+        
+    }, [ip, setIsConnect]);
+
 
     return(
-        <View style={style_setting.container_status_conected}>
-            <Text style={style_setting.text_status}> You device is connected</Text>
-
+        
+        <View style={isConnect ? style_setting.container_status_conected : style_setting.container_status_disconected}>
+            <Text style={style_setting.text_status}> Tu dispositivo esta {isConnect ? "conectado" : "desconectado"}</Text>
         </View>
+        
         
     )
 }
@@ -188,13 +250,20 @@ const FormConnected: React.FC<FormConnectedProps> = ({ ssid, setSsid, password, 
                     secureTextEntry={true}
                     
                 />
+
             </View>
         </View>
 
     );
 }
 
-const Setting = ()=>{
+
+type props_settings = {
+    ip: string,
+    setIp: (param: string) => void
+};
+
+const Setting = ({ip, setIp}: props_settings)=>{
     const [ssid, setSsid] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
@@ -208,12 +277,12 @@ const Setting = ()=>{
     setLoading(true);
 
     try {
-      const formData = new FormData();
-      formData.append("ssid", ssid);
-      formData.append("password", password);
-      console.log(formData);
+        const formData = new FormData();
+        formData.append("ssid", ssid);
+        formData.append("password", password);
+        console.log(formData);
 
-      const response = await fetch("http://192.168.4.1/wifi", {
+        const response = await fetch("http://192.168.4.1/wifi", {
         method: "POST",
         headers: {
           // NO pongas Content-Type, fetch lo asigna automáticamente para multipart/form-data
@@ -226,7 +295,11 @@ const Setting = ()=>{
         }
 
         Alert.alert("Éxito", "Configuración WiFi enviada correctamente");
-        } catch (error : unknown) {
+        
+        const result = await response.json();
+        setIp(result.ip);
+        
+    } catch (error : unknown) {
             if (error instanceof Error) {
                 console.error(error.message);
             } else {
@@ -240,8 +313,8 @@ const Setting = ()=>{
         
             <ScrollView style={style_setting.container_root}>
                 <Text style={style_setting.text_tile}>Config</Text>
-                <Status />
-                <RGPicker />
+                <Status ip={ip} setIp={setIp}/>
+                <RGPicker ip={ip} />
 
                 <FormConnected ssid={ssid} setSsid={setSsid} password={password} setPassword={setPassword}/>
 

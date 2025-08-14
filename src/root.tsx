@@ -23,13 +23,15 @@ export type ScreenName = "home" | "schedule" | "setting";
 
 const Root = ()=>{
     const [activeScreen, setActiveScreen] = useState<ScreenName>("home");
-    
+   
+    //this contain the ip
+    const [ip, setIp] = useState<string>("192.168.0.12");
 
     return(
         <View style={style_root.root}>
-            {activeScreen === "home" && <Home/>}
-            {activeScreen === "schedule" && <Schedule/>}
-            {activeScreen === "setting" && <Setting/>}
+            {activeScreen === "home" && <Home ip={ip}/>}
+            {activeScreen === "schedule" && <Schedule ip={ip}/>}
+            {activeScreen === "setting" && <Setting setIp={setIp} ip={ip}/>}
             <Nav
                 activeScreen={activeScreen}
                 setActiveScreen={setActiveScreen}
