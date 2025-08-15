@@ -84,7 +84,8 @@ type props_widget = {
     setStateHumidity: (param: boolean) => void,
     statePpm: boolean,
     setStatePpm: (param: boolean) => void,
-    ip: string
+    ip: string,
+    data:string
 }
 
 const ICONS_WIDGET = {
@@ -94,34 +95,7 @@ const ICONS_WIDGET = {
 } as const;
 
 //The wiget will show the sensor's informatizon
-const Widget = ({type_icon,ip,stateTemperature, setStateTemperature, stateHumidity, setStateHumidity,statePpm, setStatePpm}: props_widget) => {
-    const [value, setValue] = useState("0");
-    console.log("en el wisget")
-    useEffect(()=>{
-        console.log("enviando el request");
-        const fetchData = async ()=> {
-            try{
-                const response = await fetch("http://"+ip);
-                const data = await response.json();
-                console.log(data);
-                //setValue(data.oxigen) if type_icon === 'TEMPERATURE'
-                if(type_icon === 'TEMPERATURE'){
-                    setValue(data.Temperatura + " C");
-                }else if(type_icon === 'HUMIDITY'){
-                    setValue(data.Humedad + " % ");
-                }else if(type_icon === 'CO2'){
-                    setValue(data.CO2 + "ppm");
-                }
-            }catch(err){
-                console.log(err);
-            }
-        };
-
-        fetchData();
-        const intervalId = setInterval(fetchData, 180000);
-
-        return ()=> clearInterval(intervalId);
-    }, [type_icon]);
+const Widget = ({type_icon, data,ip,stateTemperature, setStateTemperature, stateHumidity, setStateHumidity,statePpm, setStatePpm}: props_widget) => {
 
     const handleClick = ()=>{
         console.log("changing the show");
@@ -141,7 +115,7 @@ const Widget = ({type_icon,ip,stateTemperature, setStateTemperature, stateHumidi
                     <Image style={style_home.icond_widget} source={ICONS_WIDGET[type_icon]} />
                 </View>
             
-                <Text style={style_home.text_style}>{value}</Text>
+                <Text style={style_home.text_style}>{data}</Text>
             </View>
         </Pressable>
     );
@@ -171,6 +145,7 @@ const Schedule = ({ip}: props_schedule)=>{
     const [scheduleData, setScheduleData] = useState<ScheduleItem[]>([]);
 
     useEffect(() => {
+        let isMounted = true;
         fetch('http://' + ip +'/task') // ← Reemplaza con tu URL real
             .then(response => response.json())
              .then((data: { [key: string]: Tarea }) => {
@@ -183,10 +158,14 @@ const Schedule = ({ip}: props_schedule)=>{
                             activity: entry.datos.tipoTarea
                             };
                         });
-                setScheduleData(transformed);
+                if(isMounted){
+                    setScheduleData(transformed);
+                    
+                }
                 }
             })
             .catch(error => console.error('Error fetching schedule:', error));
+        return ()=>{isMounted = false;} 
     }, []);
 
 /*
@@ -262,7 +241,8 @@ type props_data_visuaize = {
                             withVerticalLabels = {false}
                             
                             style={{
-                                paddingRight: 40,
+                                paddingRight:60,
+
                                 paddingLeft: 20,
                             
                             }}
@@ -298,7 +278,36 @@ const Home = ({ip}:props_home)=>{
     const [dataHumedad, setDataHumedad] = useState<number[]>([0]);
     const [dataTemperatura, setDataTemperatura] = useState<number[]>([0]);
     const [dataPpm, setDataPpm] = useState<number[]>([0]);
-    fetch("http://" + ip + "/sensors")
+
+    const [temp, setTemp] = useState<string>("0");
+    const [hume, setHume] = useState<string>("0");
+    const [ppm, setPpm] = useState<string>("0");
+    useEffect(()=>{
+        let isMounted = true;
+        console.log("enviando el request");
+        const fetchData = async ()=> {
+            console.log("en el intervalo");
+            try{
+                const response = await fetch("http://"+ip);
+                const data = await response.json();
+                console.log(data);
+                //setValue(data.oxigen) if type_icon === 'TEMPERATURE'
+                if(isMounted){
+                    setTemp(data.Temperatura + " C");
+                    setHume(data.Humedad + " % ");
+                    setPpm(data.CO2 + "ppm");
+                }
+
+            }catch(err){
+                console.log(err);
+            }
+        };
+
+        fetchData();
+        const intervalId = setInterval(fetchData, 180000);
+        
+
+         fetch("http://" + ip + "/sensors")
         .then(response => {
             if(!response.ok){
                 console.log("error en la obtencion de los datos");
@@ -313,11 +322,21 @@ const Home = ({ip}:props_home)=>{
             const nuevasTemperaturas = nuevosTimestamps.map(ts => Number(data[ts].datos.temperatura ?? 0));
 
         // Sobrescribimos los arrays
-        
-        setDataHumedad(nuevasHumedades);
-        setDataPpm(nuevosPpm);
-        setDataTemperatura(nuevasTemperaturas);
+        if(isMounted){
+
+            setDataHumedad(nuevasHumedades);
+            setDataPpm(nuevosPpm);
+            setDataTemperatura(nuevasTemperaturas);
+        }
         })
+
+
+        return ()=>{ 
+            isMounted = false;
+            clearInterval(intervalId);}
+
+    }, []);
+    
 
     return(
         
@@ -332,6 +351,7 @@ const Home = ({ip}:props_home)=>{
                         statePpm={statePpm}
                         stateTemperature={stateTemperature}
                         ip={ip}
+                        data={temp}
                     ></Widget>
                     {stateTemperature && <WidgetDataView data={dataTemperatura} title="Temperatura"></WidgetDataView>}
                     <Widget type_icon="HUMIDITY"
@@ -342,6 +362,7 @@ const Home = ({ip}:props_home)=>{
                         ip={ip}
                         statePpm={statePpm}
                         stateTemperature={stateTemperature}
+                        data={hume}
                     ></Widget>
                     {stateHumidity && <WidgetDataView data={dataHumedad} title="Humedad"></WidgetDataView>}
 
@@ -353,6 +374,7 @@ const Home = ({ip}:props_home)=>{
                         statePpm={statePpm}
                         stateTemperature={stateTemperature}
                         ip={ip}
+                        data={ppm}
                     ></Widget>
                     {statePpm && <WidgetDataView data={dataPpm} title="CO2"></WidgetDataView>}
 

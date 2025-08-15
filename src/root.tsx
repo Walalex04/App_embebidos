@@ -24,7 +24,7 @@ export type ScreenName = "home" | "schedule" | "setting";
 const Root = ()=>{
     const [activeScreen, setActiveScreen] = useState<ScreenName>("home");
    
-    //this contain the ip
+    //this contain the ip 100.121
     const [ip, setIp] = useState<string>("192.168.0.12");
 
     return(

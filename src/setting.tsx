@@ -198,16 +198,30 @@ const Status = ({ip, setIp}:props_status)=>{
     const [isConnect, setIsConnect] = useState<boolean>(false);
     
     useEffect(() => {
-        setInterval(() => {
-            fetch("http://" + ip + "/ip")
-                .then(response => {
-                    if(response.ok){
-                        setIsConnect(true);
-                    }
-                })
-        }, 200)
+        let isMounted = true;
+
+        const fetchD = async ()=>{
+            console.log("pide el estado");
+            try{
+                const response = await fetch("http://" + ip + "/ip");
+                if(response.ok && isMounted){
+                    setIsConnect(true);
+                }
+                if(!response.ok){
+                    setIsConnect(false);
+                }
+            }catch(err){
+                console.log(err);
+            }
+        }
+        fetchD();
+        const intervalId = setInterval(fetchD, 2000);
+        return ()=>{
+            isMounted = false;
+            clearInterval(intervalId);
+        }
         
-    }, [ip, setIsConnect]);
+    }, []);
 
 
     return(
